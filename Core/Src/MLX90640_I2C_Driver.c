@@ -14,16 +14,21 @@ void MLX90640_I2CFreqSet(int freq) {
 
 }
 
-void MLX90640_getDeviceId(uint8_t slaveAddr) {
-	uint16_t device_id;
-	int status = MLX90640_I2CRead(slaveAddr, 0x2407, 1, &device_id);
-	if (status != HAL_OK) {
-		printf("ERROR");
-	} else {
-		printf("DEVICE ID: %d\r\n", device_id);
+int MLX90640_I2CGeneralReset() {
+	uint8_t reset_cmd = 0x06;
+	int ack = HAL_I2C_Master_Transmit(&hi2c1, 0x00 << 1, &reset_cmd, 1, HAL_MAX_DELAY);
+	if (ack != HAL_OK) {
+		return -1;
 	}
+	return 0;
 }
 
+int MLX90640_getDeviceId(uint8_t slaveAddr, uint16_t* device_id) {
+	// 4640 should be the Device ID Returned (?) i.e. hopefully some nonzero value
+	return MLX90640_I2CRead(slaveAddr, 0x2407, 1, device_id);
+}
+
+// Make sure USART2 is enabled (?)
 void I2CScan() {
 	// Simple helper function to verify that the slaveAddr was still 0x33, factory default
 	printf("Scanning I2C Bus\r\n");
@@ -74,15 +79,5 @@ int MLX90640_I2CWrite(uint8_t slaveAddr, uint16_t writeAddress, uint16_t data) {
 	MLX90640_I2CRead(slaveAddr, writeAddress, 2, &dataCheck);
 	if (dataCheck != data) return -2;
 
-	return 0;
-}
-
-int MLX90640_I2CGeneralReset(uint8_t slaveAddr) {
-	uint8_t resetCode = 0x06;
-	int ack = HAL_I2C_Mem_Write(&hi2c1, (slaveAddr << 1), 0x00, I2C_MEMADD_SIZE_8BIT,
-			&resetCode, 1, 500);
-	if (ack != HAL_OK) {
-		return -1;
-	}
 	return 0;
 }
