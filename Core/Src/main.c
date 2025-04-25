@@ -36,6 +36,7 @@
 /* USER CODE BEGIN PD */
 #define MLX_ADDR 0x33
 #define DEVICE_ID 4640
+#define TA_SHIFT 8
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -44,14 +45,21 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-
 /* USER CODE BEGIN PV */
 int status;
 uint16_t device_id;
+uint16_t MLX_eeData[832];
+paramsMLX90640 MLX_params;
+uint16_t MLX_dataFrame[834];
+float MLX_to[768];
+float emissivity = 0.95;
+float MLX_sample[32];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+int _write(int file, char *data, int len);
+void computeMLXSample();
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -59,6 +67,17 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+//int _write(int file, char *data, int len) {
+//	// Transmit via UART using HAL function
+//	HAL_UART_Transmit(&huart2, (uint8_t*) data, len, HAL_MAX_DELAY);
+//	return len;
+//}
+
+void computeMLXSample() {
+	for (int i = 384; i < 416; i++) {
+		MLX_sample[i - 384] = MLX_to[i];
+	}
+}
 /* USER CODE END 0 */
 
 /**
@@ -93,14 +112,21 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
+  status = MLX90640_getDeviceId(MLX_ADDR, &device_id);
+  status = MLX90640_SetChessMode(MLX_ADDR);
+  status = MLX90640_DumpEE(MLX_ADDR, MLX_eeData);
+  status = MLX90640_ExtractParameters(MLX_eeData, &MLX_params);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  status = MLX90640_getDeviceId(MLX_ADDR, &device_id);
-	  HAL_Delay(1000);
+	  status = MLX90640_GetFrameData(MLX_ADDR, MLX_dataFrame);
+	  float tr = MLX90640_GetTa(MLX_dataFrame, &MLX_params) - TA_SHIFT; //Reflected temperature based on the sensor ambient temperature
+	  MLX90640_CalculateTo(MLX_dataFrame, &MLX_params, emissivity, tr, MLX_to);
+	  computeMLXSample();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

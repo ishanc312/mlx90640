@@ -7,7 +7,7 @@ void MLX90640_I2CInit() {
 }
 
 void MLX90640_I2CFreqSet(int freq) {
-	// frequency is in kHz
+	// Frequency is in kHz
 	HAL_I2C_DeInit(&hi2c1);
 	hi2c1.Init.Timing = freq;
 	HAL_I2C_Init(&hi2c1);
